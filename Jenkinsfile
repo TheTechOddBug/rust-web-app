@@ -8,7 +8,7 @@ pipeline {
         }
         stage ('Myself') {
             steps {
-                echo $(whoami)
+                sh 'whoami'
             }
         }
     }
