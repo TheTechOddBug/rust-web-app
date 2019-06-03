@@ -7,7 +7,9 @@ pipeline {
             }
         }
         stage ('Myself') {
-            echo $(whoami)
+            steps {
+                echo $(whoami)
+            }
         }
     }
 }
