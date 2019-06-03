@@ -17,6 +17,10 @@ pipeline {
                     filename 'ubuntu.dockerfile'
                 }
             }
+            when {branch 'master'}
+            steps {
+                sh 'curl --version'
+            }
             steps {
                 sh 'curl wttr.in'
             }
