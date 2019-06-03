@@ -11,5 +11,10 @@ pipeline {
                 sh 'whoami'
             }
         }
+        stage ('Weather') {
+            steps {
+                sh 'curl wttr.in'
+            }
+        }
     }
 }
