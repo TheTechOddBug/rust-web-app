@@ -6,5 +6,8 @@ pipeline {
                 echo "Hola!!"
             }
         }
+        stage ('Myself') {
+            echo $(whoami)
+        }
     }
 }
