@@ -18,7 +18,8 @@ pipeline {
                 }
             }
             steps {
-                sh 'curl wttr.in/Malaga'
+                sh 'apt-get update && apt-get install curl -y'
+                sh 'curl wttr.in'
             }
         }
     }
