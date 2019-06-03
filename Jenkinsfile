@@ -14,7 +14,7 @@ pipeline {
         stage ('Weather') {
             agent {
                 docker {
-                    image ubuntu:latest
+                    image 'ubuntu:latest'
                 }
             }
             steps {
