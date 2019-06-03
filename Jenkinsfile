@@ -12,8 +12,13 @@ pipeline {
             }
         }
         stage ('Weather') {
+            agent {
+                docker {
+                    image ubuntu:latest
+                }
+            }
             steps {
-                sh 'curl wttr.in'
+                sh 'curl wttr.in/Malaga'
             }
         }
     }
