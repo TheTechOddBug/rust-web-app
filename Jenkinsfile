@@ -1,36 +1,15 @@
 pipeline {
-    agent any
-    stages {
-        stage ('Hola Mundo') {
-            steps {
-                echo "Hola!!"
-            }
-        }
-        stage ('Myself') {
-            steps {
-                sh 'whoami'
-            }
-        }
-        stage ('Curl version') {
-            agent {
-                dockerfile {
-                    filename 'ubuntu.dockerfile'
-                }
-            }
-            when {branch 'master'}
-            steps {
-                sh 'curl --version'
-            }
-        }
-        stage ('Weather') {
-            agent {
-                dockerfile {
-                    filename 'ubuntu.dockerfile'
-                }
-            }
-            steps {
-                sh 'curl wttr.in'
-            }
-        }
-    }
+	environment {
+		REGISTRY = credentials('REGISTRY')
+		REGISTRY_HOST = '34.242.128.230'
+	}
+	agent any
+	stages {
+		stage('Docker Registry Log in') {
+			steps {
+				sh 'docker login ${REGISTRY_HOST} \
+					-u ${REGISTRY_USR} -p ${REGISTRY_PSW}'
+			}
+		}
+	}
 }
