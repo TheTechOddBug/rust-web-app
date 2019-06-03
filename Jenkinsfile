@@ -11,7 +11,7 @@ pipeline {
                 sh 'whoami'
             }
         }
-        stage ('Weather') {
+        stage ('Curl version') {
             agent {
                 dockerfile {
                     filename 'ubuntu.dockerfile'
@@ -20,6 +20,13 @@ pipeline {
             when {branch 'master'}
             steps {
                 sh 'curl --version'
+            }
+        }
+        stage ('Weather') {
+            agent {
+                dockerfile {
+                    filename 'ubuntu.dockerfile'
+                }
             }
             steps {
                 sh 'curl wttr.in'
