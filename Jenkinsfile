@@ -17,6 +17,9 @@ pipeline {
         DOCKER_PF_WEB = 'web-port-forward-smoke-test'
         DOCKER_PF_DB = 'db-port-forward-test'
         K8S_IT_POD = 'integration-tests'
+        AWS_PROD = credentials('AWS')
+        AWS_PROD_DEFAULT_REGION = 'eu-west-1'
+        AWS_PROD_CLUSTER_NAME= 'cluster-of-User7'
 	}
 	agent any
 	stages {
@@ -119,31 +122,31 @@ pipeline {
         //         sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
         //     }
         // }
-        stage('Connect to K8S Staging') {
-            steps {
-                sh 'docker run -v ${HOME}:/root \
-                    -v /var/run/docker.sock:/var/run/docker.sock \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
-                    mendrugory/awscli \
-                    aws eks --region ${AWS_STAGING_DEFAULT_REGION} \
-                    update-kubeconfig --name ${AWS_STAGING_CLUSTER_NAME}'
-            }
-        }
-        stage('Deploy to Staging') {
-            agent {
-                docker {
-                    image 'mendrugory/ekskubectl'
-                    args '-v ${HOME}/.kube:/root/.kube \
-                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
-                }
-            }
-            steps {
-                sh 'kubectl apply -f deployment/staging/staging.yaml'
-                sh 'kubectl apply -f deployment/staging/integration_tests.yaml'
-            }
-        }
+                // stage('Connect to K8S Staging') {
+                //     steps {
+                //         sh 'docker run -v ${HOME}:/root \
+                //             -v /var/run/docker.sock:/var/run/docker.sock \
+                //             -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                //             -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                //             mendrugory/awscli \
+                //             aws eks --region ${AWS_STAGING_DEFAULT_REGION} \
+                //             update-kubeconfig --name ${AWS_STAGING_CLUSTER_NAME}'
+                //     }
+                // }
+                // stage('Deploy to Staging') {
+                //     agent {
+                //         docker {
+                //             image 'mendrugory/ekskubectl'
+                //             args '-v ${HOME}/.kube:/root/.kube \
+                //                 -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                //                 -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+                //         }
+                //     }
+                //     steps {
+                //         sh 'kubectl apply -f deployment/staging/staging.yaml'
+                //         sh 'kubectl apply -f deployment/staging/integration_tests.yaml'
+                //     }
+                // }
         // stage('Staging: Port Forwarding') {
         //     steps {
         //         script {
@@ -176,38 +179,38 @@ pipeline {
         //                 byrnedo/alpine-curl --fail -I http://0.0.0.0:8888/health'
         //     }
         // }
-        stage('Staging: PF DB Migration') {
-            steps {
-                script {
-                    PODNAME = sh(script: "docker run -v ${HOME}/.kube:/root/.kube \
-                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
-                        mendrugory/ekskubectl \
-                        kubectl get pods -n staging -l app=db \
-                        -o jsonpath='{.items[0].metadata.name}'", returnStdout: true)
-                    echo "The pod is ${PODNAME}"
-                    sh(script: "docker run --name ${DOCKER_PF_DB} \
-                        -v ${HOME}/.kube:/root/.kube -p 3306:3306 --rm \
-                        -v /var/run/docker.sock:/var/run/docker.sock    \
-                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
-                        mendrugory/ekskubectl kubectl port-forward \
-                        --address 0.0.0.0 -n staging ${PODNAME} 3306:3306 &")
-                }
-            }
-        }
-        stage('Staging: DB Migration') {
-            agent {
-                dockerfile {
-                    filename 'dockerfiles/diesel-cli.dockerfile'
-                        args '--entrypoint="" --net=host \
-                        -e DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@0.0.0.0:3306/${MYSQL_DATABASE}'
-                }
-            }
-            steps {
-                sh 'diesel migration run'
-            }
-        }
+                // stage('Staging: PF DB Migration') {
+                //     steps {
+                //         script {
+                //             PODNAME = sh(script: "docker run -v ${HOME}/.kube:/root/.kube \
+                //                 -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                //                 -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                //                 mendrugory/ekskubectl \
+                //                 kubectl get pods -n staging -l app=db \
+                //                 -o jsonpath='{.items[0].metadata.name}'", returnStdout: true)
+                //             echo "The pod is ${PODNAME}"
+                //             sh(script: "docker run --name ${DOCKER_PF_DB} \
+                //                 -v ${HOME}/.kube:/root/.kube -p 3306:3306 --rm \
+                //                 -v /var/run/docker.sock:/var/run/docker.sock    \
+                //                 -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                //                 -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                //                 mendrugory/ekskubectl kubectl port-forward \
+                //                 --address 0.0.0.0 -n staging ${PODNAME} 3306:3306 &")
+                //         }
+                //     }
+                // }
+                // stage('Staging: DB Migration') {
+                //     agent {
+                //         dockerfile {
+                //             filename 'dockerfiles/diesel-cli.dockerfile'
+                //                 args '--entrypoint="" --net=host \
+                //                 -e DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@0.0.0.0:3306/${MYSQL_DATABASE}'
+                //         }
+                //     }
+                //     steps {
+                //         sh 'diesel migration run'
+                //     }
+                // }
         // stage('Staging: Integration Test') {
         //     agent {
         //         dockerfile {
@@ -224,34 +227,34 @@ pipeline {
         //         sh 'python3 integration_tests/integration_test.py'
         //     }
         // }
-        stage('Staging: Integration E2E Test') {
-            agent {
-                docker {
-                    image 'mendrugory/ekskubectl'
-                    args '-v ${HOME}/.kube:/root/.kube \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
-                }
-            }
-            steps {
-                    sh "kubectl exec -n staging -it ${K8S_IT_POD} \
-                        -- python3 integration_tests/integration_e2e_test.py"
-            }
-        }
-        stage('Staging: Integration Test') {
-            agent {
-                docker {
-                    image 'mendrugory/ekskubectl'
-                    args '-v ${HOME}/.kube:/root/.kube \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
-                }
-            }
-            steps {
-                    sh "kubectl exec -n staging -it ${K8S_IT_POD} \
-                        -- python3 integration_tests/integration_test.py"
-            }
-        }
+                    // stage('Staging: Integration E2E Test') {
+                    //     agent {
+                    //         docker {
+                    //             image 'mendrugory/ekskubectl'
+                    //             args '-v ${HOME}/.kube:/root/.kube \
+                    //             -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                    //             -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+                    //         }
+                    //     }
+                    //     steps {
+                    //             sh "kubectl exec -n staging -it ${K8S_IT_POD} \
+                    //                 -- python3 integration_tests/integration_e2e_test.py"
+                    //     }
+                    // }
+                    // stage('Staging: Integration Test') {
+                    //     agent {
+                    //         docker {
+                    //             image 'mendrugory/ekskubectl'
+                    //             args '-v ${HOME}/.kube:/root/.kube \
+                    //             -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                    //             -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+                    //         }
+                    //     }
+                    //     steps {
+                    //             sh "kubectl exec -n staging -it ${K8S_IT_POD} \
+                    //                 -- python3 integration_tests/integration_test.py"
+                    //     }
+                    // }
         // stage('Staging: Integration Test - E2E') {
         //     agent {
         //         dockerfile {
@@ -264,13 +267,37 @@ pipeline {
         //         sh 'python3 integration_tests/integration_e2e_test.py'
         //     }
         // }
+        stage('Connect to K8S Production') {
+            steps {
+                sh 'docker run -v ${HOME}:/root \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -e AWS_ACCESS_KEY_ID=${AWS_PROD_USR} \
+                    -e AWS_SECRET_ACCESS_KEY=${AWS_PROD_PSW} \
+                    mendrugory/awscli \
+                    aws eks --region ${AWS_PROD_DEFAULT_REGION} \
+                    update-kubeconfig --name ${AWS_PROD_CLUSTER_NAME}'
+            }
+        }
+        stage('Deploy to Prodution') {
+            agent {
+                docker {
+                    image 'mendrugory/ekskubectl'
+                    args '-v ${HOME}/.kube:/root/.kube \
+                        -e AWS_ACCESS_KEY_ID=${AWS_PROD_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_PROD_PSW}'
+                    }
+                }
+            steps {
+                sh 'kubectl apply -f deployment/prod/prod.yaml'
+            }
+        }
     }
     post {
         always {
-            sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
-            sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
+                // sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
+                // sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
             // sh 'docker kill ${DOCKER_PF_WEB} || true'
-            sh 'docker kill ${DOCKER_PF_DB} || true'
+                // sh 'docker kill ${DOCKER_PF_DB} || true'
             // sh 'docker run -v ${HOME}/.kube:/root/.kube \
             // -v /var/run/docker.sock:/var/run/docker.sock \
             // -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
