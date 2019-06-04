@@ -15,6 +15,7 @@ pipeline {
         AWS_STAGING_DEFAULT_REGION = 'eu-west-1'
         AWS_STAGING_CLUSTER_NAME= 'cluster-of-User7'
         DOCKER_PF_WEB = 'web-port-forward-smoke-test'
+        DOCKER_PF_DB = 'db-port-forward-test'
 	}
 	agent any
 	stages {
@@ -128,73 +129,107 @@ pipeline {
                     update-kubeconfig --name ${AWS_STAGING_CLUSTER_NAME}'
             }
         }
-    stage('Deploy to Staging') {
-        agent {
-            docker {
-                image 'mendrugory/ekskubectl'
-                args '-v ${HOME}/.kube:/root/.kube \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+        stage('Deploy to Staging') {
+            agent {
+                docker {
+                    image 'mendrugory/ekskubectl'
+                    args '-v ${HOME}/.kube:/root/.kube \
+                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+                }
+            }
+            steps {
+                sh 'kubectl apply -f deployment/staging/staging.yaml'
             }
         }
-        steps {
-            sh 'kubectl apply -f deployment/staging/staging.yaml'
-        }
-    }
-    stage('Staging: Port Forwarding') {
-        steps {
-            script {
-                PODNAME = sh(script: "docker run \
-                    -v ${HOME}/.kube:/root/.kube \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
-                    mendrugory/ekskubectl \
-                    kubectl get pods -n staging -l app=web \
-                    -o jsonpath='{.items[0].metadata.name}'",
-                    returnStdout: true)
-                echo "The pod is ${PODNAME}"
-                sh(script: "docker run \
-                    --name ${DOCKER_PF_WEB} \
-                    -v ${HOME}/.kube:/root/.kube -p 8888:8888 --rm \
-                    -v /var/run/docker.sock:/var/run/docker.sock    \
-                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
-                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
-                    mendrugory/ekskubectl \
-                    kubectl port-forward \
-                    --address 0.0.0.0 -n staging \
-                    ${PODNAME} 8888:80 &")
-                sh 'sleep 10'
+        stage('Staging: Port Forwarding') {
+            steps {
+                script {
+                    PODNAME = sh(script: "docker run \
+                        -v ${HOME}/.kube:/root/.kube \
+                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                        mendrugory/ekskubectl \
+                        kubectl get pods -n staging -l app=web \
+                        -o jsonpath='{.items[0].metadata.name}'",
+                        returnStdout: true)
+                    echo "The pod is ${PODNAME}"
+                    sh(script: "docker run \
+                        --name ${DOCKER_PF_WEB} \
+                        -v ${HOME}/.kube:/root/.kube -p 8888:8888 --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock    \
+                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                        mendrugory/ekskubectl \
+                        kubectl port-forward \
+                        --address 0.0.0.0 -n staging \
+                        ${PODNAME} 8888:80 &")
+                    sh 'sleep 10'
+                }
             }
         }
-    }
-    stage('Staging: Smoke Testing') {
-        steps {
-            sh 'docker run --net=host --rm \
-                    byrnedo/alpine-curl --fail -I http://0.0.0.0:8888/health'
+        stage('Staging: Smoke Testing') {
+            steps {
+                sh 'docker run --net=host --rm \
+                        byrnedo/alpine-curl --fail -I http://0.0.0.0:8888/health'
+            }
         }
-    }
-}
-    post {
-        always {
-            sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
-            sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
-            sh 'docker kill ${DOCKER_PF_WEB} || true'
+        stage('Staging: PF DB Migration') {
+            steps {
+                script {
+                    PODNAME = sh(script: "docker run -v ${HOME}/.kube:/root/.kube \
+                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                        mendrugory/ekskubectl \
+                        kubectl get pods -n staging -l app=db \
+                        -o jsonpath='{.items[0].metadata.name}'", returnStdout: true)
+                    echo "The pod is ${PODNAME}"
+                    sh(script: "docker run --name ${DOCKER_PF_DB} \
+                        -v ${HOME}/.kube:/root/.kube -p 3306:3306 --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock    \
+                        -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                        -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
+                        mendrugory/ekskubectl kubectl port-forward \
+                        --address 0.0.0.0 -n staging ${PODNAME} 3306:3306 &")
+                }
+            }
         }
-        success {
-            slackSend (
-                channel: "${SLACK_CHANNEL}",
-                teamDomain: "${SLACK_TEAM_DOMAIN}",
-                tokenCredentialId: 'SLACK_TOKEN_ID',
-                color: '#00FF00',
-                message: "SUCCESSFUL: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
+        stage('Staging: DB Migration') {
+            agent {
+                dockerfile {
+                    filename 'dockerfiles/diesel-cli.dockerfile'
+                        args '--entrypoint="" --net=host \
+                        -e DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@0.0.0.0:3306/${MYSQL_DATABASE}'
+                }
+            }
+            steps {
+                sh 'diesel migration run'
+            }
         }
-        failure {
-            slackSend (
-                channel: "${SLACK_CHANNEL}",
-                teamDomain: "${SLACK_TEAM_DOMAIN}",
-                tokenCredentialId: 'SLACK_TOKEN_ID',
-                color: '#FF0000',
-                message: "FAILED: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
+
+        post {
+            always {
+                sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
+                sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
+                sh 'docker kill ${DOCKER_PF_WEB} || true'
+                sh 'docker kill ${DOCKER_PF_DB} || true'
+            }
+            success {
+                slackSend (
+                    channel: "${SLACK_CHANNEL}",
+                    teamDomain: "${SLACK_TEAM_DOMAIN}",
+                    tokenCredentialId: 'SLACK_TOKEN_ID',
+                    color: '#00FF00',
+                    message: "SUCCESSFUL: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
+            }
+            failure {
+                slackSend (
+                    channel: "${SLACK_CHANNEL}",
+                    teamDomain: "${SLACK_TEAM_DOMAIN}",
+                    tokenCredentialId: 'SLACK_TOKEN_ID',
+                    color: '#FF0000',
+                    message: "FAILED: Job '${JOB_NAME} [${BUILD_NUMBER}]' (${BUILD_URL})")
+            }
         }
     }
 }
