@@ -121,7 +121,7 @@ spec:
   - name: private-registry
   containers:
   - image: 54.154.187.102/python-base
-    command: ['/bin/sleep', '60']
+    command: ['/bin/sleep', '120']
     name: integration-tests
     volumeMounts:
     - name: integration-tests
