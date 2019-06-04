@@ -14,6 +14,7 @@ pipeline {
         AWS_STAGING = credentials('AWS')
         AWS_STAGING_DEFAULT_REGION = 'eu-west-1'
         AWS_STAGING_CLUSTER_NAME= 'cluster-of-User7'
+        DOCKER_PF_WEB = 'web-port-forward-smoke-test'
 	}
 	agent any
 	stages {
@@ -140,7 +141,7 @@ pipeline {
             sh 'kubectl apply -f deployment/staging/staging.yaml'
         }
     }
-    stage('Staging: Smoke Testing') {
+    stage('Staging: Port Forwarding') {
         steps {
             script {
                 PODNAME = sh(script: "docker run \
@@ -153,7 +154,7 @@ pipeline {
                     returnStdout: true)
                 echo "The pod is ${PODNAME}"
                 sh(script: "docker run \
-                    --name web-port-forward-smoke-test \
+                    --name ${DOCKER_PF_WEB} \
                     -v ${HOME}/.kube:/root/.kube -p 8888:8888 --rm \
                     -v /var/run/docker.sock:/var/run/docker.sock    \
                     -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
@@ -162,10 +163,14 @@ pipeline {
                     kubectl port-forward \
                     --address 0.0.0.0 -n staging \
                     ${PODNAME} 8888:80 &")
-                sh 'sleep 10 \
-                    && docker run --net=host --rm \
-                    byrnedo/alpine-curl --fail -I http://0.0.0.0:8888/health'
+                sh 'sleep 10'
             }
+        }
+    }
+    stage('Staging: Smoke Testing') {
+        steps {
+            sh 'docker run --net=host --rm \
+                    byrnedo/alpine-curl --fail -I http://0.0.0.0:8888/health'
         }
     }
 }
@@ -173,7 +178,7 @@ pipeline {
         always {
             sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
             sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
-            sh 'docker kill web-port-forward-smoke-test || true'
+            sh 'docker kill ${DOCKER_PF_WEB} || true'
         }
         success {
             slackSend (
