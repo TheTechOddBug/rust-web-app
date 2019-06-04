@@ -31,7 +31,7 @@ pipeline {
         }
         stage('Docker build') {
             steps {
-                sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfiles .'
+                sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfile .'
             }
         }
         stage('Docker Up') {
