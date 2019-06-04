@@ -24,12 +24,12 @@ pipeline {
 	}
 	agent any
 	stages {
-		// stage('Docker Registry Log in') {
-		// 	steps {
-		// 		sh 'docker login ${REGISTRY_HOST} \
-		// 			-u ${REGISTRY_USR} -p ${REGISTRY_PSW}'
-		// 	}
-		// }
+		stage('Docker Registry Log in') {
+			steps {
+				sh 'docker login ${REGISTRY_HOST} \
+					-u ${REGISTRY_USR} -p ${REGISTRY_PSW}'
+			}
+		}
         // // stage('Unit Test') {
         // //     agent{
         // //         docker{
@@ -41,11 +41,11 @@ pipeline {
         // //         sh 'cargo test'
         // //     }
         // // }
-        // // stage('Docker build') {
-        // //     steps {
-        // //         sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfile .'
-        // //     }
-        // // }
+        stage('Docker build') {
+            steps {
+                sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfile .'
+            }
+        }
         // stage('Docker Up') {
         //     steps {
         //         sh 'docker network create --driver=bridge \
@@ -113,16 +113,16 @@ pipeline {
         //         sh 'python3 integration_tests/integration_e2e_test.py'
         //     }
         // }
-        // stage ('Docker Push') {
-        //     steps {
-        //         sh 'docker tag \
-        //             ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}'
-        //         sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}'
-        //         sh 'docker tag \
-        //             ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
-        //         sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
-        //     }
-        // }
+        stage ('Docker Push') {
+            steps {
+                sh 'docker tag \
+                    ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}'
+                sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}'
+                sh 'docker tag \
+                    ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
+            }
+        }
                 // stage('Connect to K8S Staging') {
                 //     steps {
                 //         sh 'docker run -v ${HOME}:/root \
