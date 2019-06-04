@@ -54,8 +54,8 @@ fn health(_connection: db::Connection) -> &'static str {
 
 fn main() {
     rocket::ignite()
-        .manage(db::connect()
-        .mount("/health"m routes![health])
+        .manage(db::connect())
+        .mount("/health", routes![health])
         .mount("/hero", routes![create, update, delete, read])
         .mount("/heroes", routes![read_all])
         .launch();
