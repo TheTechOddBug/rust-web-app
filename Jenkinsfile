@@ -307,6 +307,7 @@ pipeline {
                     }
                 }
             steps {
+                sh "sed 's@{{VERSION}}@$BUILD_NUMBER@g' deployment/prod/prod.yaml.template > deployment/prod/prod.yaml"
                 sh 'kubectl apply -f deployment/prod/prod.yaml'
             }
         }
