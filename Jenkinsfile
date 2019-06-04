@@ -34,11 +34,11 @@ pipeline {
                 sh 'sleep 30'
                 sh 'curl --fail -I http://0.0.0.0:8888/health'
             }
-        }
-    }
-    post {
-        always {
-            sh "docker-compose down"
+            post {
+                always {
+                    sh "docker-compose down"
+                }
+            }
         }
     }
 }
