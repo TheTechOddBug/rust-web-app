@@ -31,11 +31,11 @@ pipeline {
                 sh 'cargo test'
             }
         }
-        stage('Docker build') {
-            steps {
-                sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfile .'
-            }
-        }
+        // stage('Docker build') {
+        //     steps {
+        //         sh 'docker build -t ${DOCKER_IMAGE} -f dockerfiles/Dockerfile .'
+        //     }
+        // }
         stage('Docker Up') {
             steps {
                 sh 'docker network create --driver=bridge \
