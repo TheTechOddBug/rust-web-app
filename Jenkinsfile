@@ -293,7 +293,7 @@ pipeline {
         }
     }
     post {
-        always {
+        //always {
                 // sh 'docker kill ${DOCKER_IMAGE} ${DB_IMAGE} || true'
                 // sh 'docker network rm ${DOCKER_NETWORK_NAME} || true'
             // sh 'docker kill ${DOCKER_PF_WEB} || true'
@@ -303,8 +303,8 @@ pipeline {
             // -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
             // -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW} \
             // mendrugory/ekskubectl \
-            // kubectl delete po ${K8S_IT_POD} -n staging'
-        }
+            // kubectl delete po ${K8S_IT_POD} -n staging' || true
+        //}
         success {
             slackSend (
                 channel: "${SLACK_CHANNEL}",
