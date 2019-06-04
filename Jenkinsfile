@@ -108,6 +108,9 @@ pipeline {
                 sh 'docker tag \
                     ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}'
                 sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}'
+                sh 'docker tag \
+                    ${DOCKER_IMAGE} ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
+                sh 'docker push ${REGISTRY_HOST}/${DOCKER_IMAGE}:${BUILD_NUMBER}'
             }
         }
     }
