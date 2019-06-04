@@ -279,6 +279,24 @@ pipeline {
                     update-kubeconfig --name ${AWS_PROD_CLUSTER_NAME}'
             }
         }
+        stage('Friendly Reminder Authorization before Deploying') {
+            steps {
+                slackSend (channel: "${SLACK_CHANNEL}",
+                    teamDomain: "${SLACK_TEAM_DOMAIN}",
+                    tokenCredentialId: 'SLACK_TOKEN_ID',
+                    color: '#E8EA25',
+                    message: "Job '${JOB_NAME} [${BUILD_NUMBER}]' is waiting for authorization before deploying to production. (${BUILD_URL})")
+            }
+        }
+        stage('Authorization before Deploying') {
+            input {
+                message "Let's Deploy !!!"
+                ok "Yeaaahh !!!"
+            }
+            steps {
+                echo "Authorization before Deploying"
+            }
+        }
         stage('Deploy to Prodution') {
             agent {
                 docker {
@@ -322,15 +340,6 @@ pipeline {
             }
             steps {
                 sh 'diesel migration run'
-            }
-        }
-        stage('Friendly Reminder Authorization before Deploying') {
-            steps {
-                slackSend (channel: "${SLACK_CHANNEL}",
-                    teamDomain: "${SLACK_TEAM_DOMAIN}",
-                    tokenCredentialId: 'SLACK_TOKEN_ID',
-                    color: '#E8EA25',
-                    message: "Job '${JOB_NAME} [${BUILD_NUMBER}]' is waiting for authorization before deploying to production. (${BUILD_URL})")
             }
         }
     }
