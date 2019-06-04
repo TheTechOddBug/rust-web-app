@@ -63,7 +63,7 @@ pipeline {
         stage('DB Migration') {
             agent {
                 dockerfile {
-                    filename 'dockerfiles/diesel-cli.dockerfile' 
+                    filename 'dockerfiles/diesel-cli.dockerfile'
                     args '-v ${PWD}:/volume \
                         -w /volume \
                         --entrypoint="" \
@@ -72,7 +72,23 @@ pipeline {
                     }
                 }
             steps {
-                sh 'diesel migration run' 
+                sh 'diesel migration run'
+            }
+        }
+        stage('Integration Test') {
+            agent {
+                dockerfile {
+                    filename 'dockerfiles/python.dockerfile' 
+                        args '--net ${DOCKER_NETWORK_NAME} \
+                            -e WEB_HOST=${DOCKER_IMAGE} \
+                            -e DB_HOST=${DB_IMAGE} \
+                            -e DB_DATABASE=${MYSQL_DATABASE} \
+                            -e DB_USER=${MYSQL_USER} \
+                            -e DB_PASSWORD=${MYSQL_PASSWORD}'
+                }
+            }
+            steps {
+                sh 'python3 integration_tests/integration_test.py' 
             }
         }
     }
