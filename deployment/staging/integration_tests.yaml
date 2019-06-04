@@ -50,7 +50,7 @@ data:
             os.environ['DB_DATABASE'], \
             os.environ['DB_USER'], \
             os.environ['DB_PASSWORD'], \
-            hero['id']) 
+            hero['id'])
         if hero == received_hero:
             print("Integration test passed.")
             time.sleep(2)
