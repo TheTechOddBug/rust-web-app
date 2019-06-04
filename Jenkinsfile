@@ -224,6 +224,20 @@ pipeline {
         //         sh 'python3 integration_tests/integration_test.py'
         //     }
         // }
+        stage('Staging: Integration E2E Test') {
+            agent {
+                docker {
+                    image 'mendrugory/ekskubectl'
+                    args '-v ${HOME}/.kube:/root/.kube \
+                    -e AWS_ACCESS_KEY_ID=${AWS_STAGING_USR} \
+                    -e AWS_SECRET_ACCESS_KEY=${AWS_STAGING_PSW}'
+                }
+            }
+            steps {
+                    sh "kubectl exec -n staging -it ${K8S_IT_POD} \
+                        -- python3 integration_tests/integration_e2e_test.py"
+            }
+        }
         stage('Staging: Integration Test') {
             agent {
                 docker {
