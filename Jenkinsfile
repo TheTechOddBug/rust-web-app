@@ -78,7 +78,7 @@ pipeline {
         stage('Integration Test') {
             agent {
                 dockerfile {
-                    filename 'dockerfiles/python.dockerfile' 
+                    filename 'dockerfiles/python.dockerfile'
                         args '--net ${DOCKER_NETWORK_NAME} \
                             -e WEB_HOST=${DOCKER_IMAGE} \
                             -e DB_HOST=${DB_IMAGE} \
@@ -88,7 +88,19 @@ pipeline {
                 }
             }
             steps {
-                sh 'python3 integration_tests/integration_test.py' 
+                sh 'python3 integration_tests/integration_test.py'
+            }
+        }
+        stage('Integration Test: E2E') {
+            agent {
+                dockerfile {
+                    filename 'dockerfiles/python.dockerfile'
+                    args '--net ${DOCKER_NETWORK_NAME} \
+                            -e WEB_HOST=${DOCKER_IMAGE}'
+                }
+            }
+            steps {
+                sh 'python3 integration_tests/integration_e2e_test.py'
             }
         }
     }
